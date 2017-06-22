@@ -22,7 +22,7 @@ First you must generate a dump of all the formats by running the following comma
 $ ./generate-matrix
 ```
 
-It should take about 5-10 minutes to complete and you will find a new CSV file is created at the end.
+It should take about 15-20 minutes to complete and you will find a new CSV file is created at the end.
 
 ### Importing into Google Sheets
 

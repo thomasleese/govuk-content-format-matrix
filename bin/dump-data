@@ -20,7 +20,7 @@ def gov_uk_url(base_path)
 end
 
 def status_for_url(url)
-  sleep 0.2  # to avoid sending loads of requests to GOV.UK
+  sleep 0.3  # to avoid sending loads of requests to GOV.UK
   url = URI.parse(url)
   req = Net::HTTP.new(url.host, url.port)
   req.use_ssl = true
