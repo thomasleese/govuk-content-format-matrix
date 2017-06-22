@@ -61,6 +61,7 @@ def check_frontend_status(document_type, url)
   doc = Nokogiri::HTML(open(url))
 
   return "H" if doc.at_css(".history-information")
+  return "H" if doc.at_css("#history.history")
   return "M" if doc.at_css(".modified-date")
   "X"
 end
