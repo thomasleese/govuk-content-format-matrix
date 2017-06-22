@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo Copying dump script to integration
+
+scp bin/dump-data content-store-1.integration:/var/apps/content-store
+
+echo Running dump script on integration
+
+ssh content-store-1.integration 'cd /var/apps/content-store && sudo -u deploy govuk_setenv content-store bundle exec dump-data'
+
+echo Copying dump from integration
+
+csv_file=matrix_$(date +%F_%T).csv
+ods_file=matrix_$(date +%F_%T).ods
+
+scp content-store-1.integration:/var/apps/content-store/dump.csv ./$csv_file

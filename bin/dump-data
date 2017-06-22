@@ -1,0 +1,107 @@
+#!/usr/bin/env ruby
+
+require File.expand_path("../config/environment", __FILE__)
+
+require "csv"
+require "open-uri"
+require "net/http"
+
+class Array
+  def to_csv(filename)
+    puts "Writing CSV: #{filename}"
+    CSV.open(filename, "wb") do |csv|
+      self.each { |row| csv << row }
+    end
+  end
+end
+
+def gov_uk_url(base_path)
+  "https://www.gov.uk#{base_path}"
+end
+
+def status_for_url(url)
+  sleep 0.1  # to avoid sending loads of requests to GOV.UK
+  url = URI.parse(url)
+  req = Net::HTTP.new(url.host, url.port)
+  req.use_ssl = true
+  res = req.request_head(url.path)
+  res.code
+end
+
+def find_working_example(schema_name, document_type, rendering_app, publishing_app)
+  puts "Finding a working example for: #{document_type}"
+
+  return nil if document_type == "gone"
+
+  ContentItem.where(
+    schema_name: schema_name,
+    document_type: document_type,
+    rendering_app: rendering_app,
+    publishing_app: publishing_app
+  ).pluck(:base_path).each do |base_path|
+    url = gov_uk_url(base_path)
+    status = status_for_url(url)
+
+    if document_type == "redirect"
+      return url if status == "301"
+    else
+      return url if status == "200"
+    end
+  end
+
+  nil
+end
+
+def check_frontend_status(document_type, url)
+  puts "Checking frontend status for: #{url} (#{document_type})"
+
+  return "?" unless url
+  return "X" if document_type == "redirect"
+
+  doc = Nokogiri::HTML(open(url))
+
+  return "H" if doc.at_css(".history-information")
+  return "M" if doc.at_css(".modified-date")
+  "X"
+end
+
+def formats
+  # NOTE we cannot use aggregate functions here as the result is bigger
+  # than the maximum size of a document, and we're not using MongoDB 2.6
+  # so we can't use the nice features to sort that.
+
+  puts "Collecting all the formats"
+
+  ContentItem
+    .pluck(
+      :schema_name, :document_type, :rendering_app, :publishing_app,
+    )
+    .uniq
+    .sort_by do |row|
+      row.join(" ")
+    end
+end
+
+def generate_dump
+  formats.map do |schema_name, document_type, rendering_app, publishing_app|
+    example_url = find_working_example(schema_name, document_type, rendering_app, publishing_app)
+    frontend_status = check_frontend_status(document_type, example_url)
+    backend_status = "?"
+
+    [
+      schema_name,
+      document_type,
+      rendering_app,
+      publishing_app,
+      frontend_status,
+      backend_status,
+      example_url,
+    ]
+  end
+end
+
+def generate_csv(filename)
+  generate_dump.to_csv(filename)
+end
+
+generate_csv("dump.csv")
