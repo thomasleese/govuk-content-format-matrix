@@ -52,6 +52,17 @@ def find_working_example(schema_name, document_type, rendering_app, publishing_a
   nil
 end
 
+def count_content_items(schema_name, document_type, rendering_app, publishing_app)
+  puts "Counting content items with schema_name: #{schema_name} and document_type: #{document_type}"
+
+  ContentItem.where(
+    schema_name: schema_name,
+    document_type: document_type,
+    rendering_app: rendering_app,
+    publishing_app: publishing_app
+  ).count
+end
+
 def check_frontend_status(document_type, url)
   puts "Checking frontend status for: #{url} (#{document_type})"
 
@@ -85,6 +96,7 @@ end
 
 def generate_dump
   formats.map do |schema_name, document_type, rendering_app, publishing_app|
+    content_item_coverage = count_content_items(schema_name, document_type, rendering_app, publishing_app)
     example_url = find_working_example(schema_name, document_type, rendering_app, publishing_app)
     frontend_status = check_frontend_status(document_type, example_url)
     backend_status = "?"
@@ -96,7 +108,8 @@ def generate_dump
       publishing_app,
       frontend_status,
       backend_status,
-      example_url,
+      content_item_coverage,
+      example_url
     ]
   end
 end
