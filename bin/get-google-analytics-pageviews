@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+require "csv"
+require "google/apis/analyticsreporting_v4"
+require "googleauth"
+require "yaml"
+
+GA_REPORTING = Google::Apis::AnalyticsreportingV4
+PAGEVIEWS = "ga:dimension2"
+RENDERING_APP = "ga:dimension20"
+
+def load_config_data
+  YAML.load(File.open("config/ga_env.yml")).each do |key, value|
+    ENV[key.to_s] = value
+  end
+end
+
+
+
+def get_google_analytics_views(document_type, rendering_app)
+  return unless document_type && rendering_app
+  service = ga_authorization
+
+  report_request = create_ga_report_request(document_type, rendering_app)
+  get_reports_request = get_reports_request(report_request)
+
+  response = service.batch_get_reports(get_reports_request)
+
+  views = response.reports[0].data.totals[0].values[0]
+  return unless views
+
+  puts "Document type: #{document_type}, Rendering app: #{rendering_app}, Views:#{views}"
+  views
+end
+
+def create_ga_report_request(document_type, rendering_app)
+  GA_REPORTING::ReportRequest.new.tap do |request|
+    request.view_id = ENV["GOOGLE_ANALYTICS_GOVUK_VIEW_ID"]
+    request.metrics = [{ "expression": "ga:pageviews" }]
+    request.dimensions = [{ "name": PAGEVIEWS }]
+    request.date_ranges = [date_range]
+    request.dimension_filter_clauses = [dimension_filter_clause(document_type, rendering_app)]
+  end
+end
+
+def dimension_filter_clause(document_type, rendering_app)
+  GA_REPORTING::DimensionFilterClause.new.tap do |clause|
+    clause.filters = []
+    clause.filters << dimension_filter(PAGEVIEWS, document_type)
+    clause.filters << dimension_filter(RENDERING_APP, rendering_app)
+    clause.operator = "AND"
+  end
+end
+
+def dimension_filter(dimension, expression)
+  GA_REPORTING::DimensionFilter.new.tap do |filter|
+    filter.dimension_name = dimension
+    filter.expressions = [expression]
+    filter.operator = "EXACT"
+  end
+end
+
+def date_range
+  GA_REPORTING::DateRange.new.tap do |date_range|
+    date_range.start_date = "7daysAgo"
+    date_range.end_date = "today"
+  end
+end
+
+def get_reports_request(report_request)
+  GA_REPORTING::GetReportsRequest.new.tap do |request|
+    request.report_requests = [report_request]
+  end
+end
+
+def ga_authorization
+  client = GA_REPORTING::AnalyticsReportingService.new
+  scope = "https://www.googleapis.com/auth/analytics.readonly"
+  client.authorization = Google::Auth::ServiceAccountCredentials.make_creds(scope: scope)
+  client
+end
+
+def generate_page_views
+  load_config_data
+
+  dump = ARGV[0]
+  new_file = ARGV[1]
+
+  raise "Matrix file missing" unless dump
+
+  CSV.open(new_file, 'a') do |csv|
+    CSV.foreach(dump) do |row|
+      row[7] = get_google_analytics_views(row[1], row[2])
+      csv << row
+    end
+  end
+end
+
+generate_page_views

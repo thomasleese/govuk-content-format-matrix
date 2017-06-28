@@ -13,8 +13,14 @@ echo Copying dump from integration
 csv_file=matrix_$(date +%F_%T).csv
 ods_file=matrix_$(date +%F_%T).ods
 
-scp content-store-1.integration:/var/apps/content-store/dump.csv ./$csv_file
+scp content-store-1.integration:/var/apps/content-store/dump.csv ./dump.csv
+
+echo Generating page views from Google Analytics
+
+bundle && bundle exec ./bin/get-google-analytics-pageviews dump.csv $csv_file
 
 echo Removing dump and dump script from integration
 
-ssh content-store-1.integration 'rm /var/apps/content-store/dump-data && rm /var/apps/content-store/$csv_file'
+ssh content-store-1.integration 'rm /var/apps/content-store/dump-data && rm /var/apps/content-store/dump.csv'
+
+rm dump.csv

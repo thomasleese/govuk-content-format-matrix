@@ -100,6 +100,7 @@ def generate_dump
     example_url = find_working_example(schema_name, document_type, rendering_app, publishing_app)
     frontend_status = check_frontend_status(document_type, example_url)
     backend_status = "?"
+    google_analytics_views = ""
 
     [
       schema_name,
@@ -109,6 +110,7 @@ def generate_dump
       frontend_status,
       backend_status,
       content_item_coverage,
+      google_analytics_views,
       example_url
     ]
   end
