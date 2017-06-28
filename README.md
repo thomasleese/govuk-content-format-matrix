@@ -16,7 +16,9 @@ Follow the instructions below to create your own format matrix.
 
 ### Generate CSV Dump
 
-First you must generate a dump of all the formats, content item coverage and Google Analytics page views by running the following command on your development laptop:
+First, ask your friendly local Lead Developer or Technical Architect for GOV.UK's Google Analytics credentials and populate `config/ga_env.yml` with them.  Note the key names should not be changed, as `googleauth` uses these for authorization.
+
+Next you must generate a dump of all the formats, content item coverage and Google Analytics page views by running the following command on your development laptop:
 
 ```bash
 $ ./generate-matrix
